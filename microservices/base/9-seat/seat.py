@@ -203,13 +203,13 @@ async def reserve_seat():
             {"$set": {"reservation_timestamp": current_time}},
         )
 
+        # Try to acquire the lock in Redis
         if await redis_client.set(f"ticket_hold:{ticket_id}", user_id, ex=180, nx=True):
             print(f"Successfully reserved ticket in Redis for ticket_id: {ticket_id}")
             print("Reserved ticket: ", ticket_id)
 
             reserved_tickets.append(ticket_id)
         else:
-            # Rollback logic here
             print("ERROR: Redis command did not work.")
             break
 
@@ -227,7 +227,7 @@ async def reserve_seat():
             200,
         )
     else:
-        # Rollback in Redis
+        # Rollback in Redis, i.e. release the lock
         for ticket_id in reserved_tickets:
             await redis_client.delete(f"ticket_hold:{ticket_id}")
         return (
